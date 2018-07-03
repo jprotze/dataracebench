@@ -61,6 +61,7 @@ def result_type(row):
 
 datasets = {
     'archer': ['results/archer-4.0.1-polyhedral.csv', 'results/archer-4.0.1-Quartz.csv']
+  ,  'sword': ['results/sword-4.0.1-polyhedral.csv', 'results/sword-4.0.1-Quartz.csv']
   , 'helgrind': ['results/helgrind-polyhedral-Quartz.csv', 'results/helgrind-Quartz.csv']
   , 'inspector': ['results/inspector-polyhedral.csv', 'results/inspector-ti3-Quartz.csv']
   , 'tsan': ['results/tsan-4.0.1-Quartz.csv', 'results/tsan-4.0.1-polyhedral.csv']

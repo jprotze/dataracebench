@@ -60,6 +60,7 @@ if [[ -z "$OPTION" || "$OPTION" == "--help" ]]; then
     echo "--helgrind : compile and test all benchmarks with Helgrind"
     echo "--tsan     : compile and test all benchmarks with clang ThreadSanitizer"
     echo "--archer   : compile and test all benchmarks with Archer"
+    echo "--sword   : compile and test all benchmarks with Sword"
     echo "--inspector: compile and test all benchmarks with Intel Inspector"
     echo
     exit
@@ -68,6 +69,7 @@ fi
 if [[ "$OPTION" == "--small" ]]; then
   scripts/test-harness.sh -t 3 -n 2 -d 32 -x helgrind
   scripts/test-harness.sh -t 3 -n 2 -d 32 -x archer
+  scripts/test-harness.sh -t 3 -n 2 -d 32 -x sword
   scripts/test-harness.sh -t 3 -n 2 -d 32 -x tsan
   scripts/test-harness.sh -t 3 -n 2 -d 32 -x inspector-max-resources
 fi
@@ -125,6 +127,10 @@ fi
 
 if [[ "$OPTION" == "--archer" ]]; then
     scripts/test-harness.sh -x archer
+fi
+
+if [[ "$OPTION" == "--sword" ]]; then
+    scripts/test-harness.sh -x sword -t 12 -n 2 -d 32
 fi
 
 if [[ "$OPTION" == "--tsan" ]]; then

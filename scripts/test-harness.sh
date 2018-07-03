@@ -45,7 +45,7 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 CSV_HEADER="tool,id,filename,haverace,threads,dataset,races,elapsed-time(seconds),used-mem(KBs),compile-return,runtime-return"
-TESTS=($(grep -l main micro-benchmarks/new/*.cpp micro-benchmarks/new/*.c))
+TESTS=($(grep -l main micro-benchmarks/*.c))
 OUTPUT_DIR="results"
 LOG_DIR="$OUTPUT_DIR/log"
 EXEC_DIR="$OUTPUT_DIR/exec"
@@ -64,6 +64,9 @@ TSAN_COMPILE_FLAGS="-fopenmp -fsanitize=thread -g"
 ARCHER=${ARCHER:-"clang-archer"}
 ARCHER_COMPILE_FLAGS="-larcher"
 
+SWORD=${SWORD:-"clang-sword"}
+SWORD_COMPILE_FLAGS="-g"
+
 INSPECTOR=${INSPECTOR:-"inspxe-cl"}
 ICC_COMPILE_FLAGS="-O0 -fopenmp -std=c99 -qopenmp-offload=host"
 ICPC_COMPILE_FLAGS="-O0 -fopenmp -qopenmp-offload=host"
@@ -81,7 +84,7 @@ usage () {
   echo
   echo "OPTIONS:"
   echo "  -x tool       : Add the specified tool to test set."
-  echo "                  Value can be one of: gnu, clang, intel, helgrind, tsan, archer, inspector, inspector-max-resources."
+  echo "                  Value can be one of: gnu, clang, intel, helgrind, tsan, archer, sword, inspector, inspector-max-resources."
   echo "  -n iterations : Run each setting the specified number of iterations."
   echo "  -t threads    : Add the specified number of threads as a testcase."
   echo "  -d size       : Add a specific dataset size to the varlen test suite."
@@ -96,6 +99,7 @@ valid_tool_name () {
     intel) return 0 ;;
     helgrind) return 0 ;;
     archer) return 0 ;;
+    sword) return 0 ;;
     tsan) return 0 ;;
     inspector) return 0 ;;
     inspector-max-resources) return 0 ;;
@@ -148,8 +152,8 @@ done
 
 # Set default values
 if [[ ! ${#TOOLS[@]} -gt 0 ]]; then
-  echo "Default tool set will be used: gnu, clang, intel helgrind, tsan, archer, inspector-max-resources."
-  TOOLS=( 'gnu' 'clang' 'intel' 'helgrind' 'tsan' 'archer' 'inspector-max-resources' )
+  echo "Default tool set will be used: gnu, clang, intel helgrind, tsan, archer, sword, inspector-max-resources."
+  TOOLS=( 'gnu' 'clang' 'intel' 'helgrind' 'tsan' 'archer' 'sword' 'inspector-max-resources' )
 else
   echo "Tools: ${TOOLS[*]}";
 fi
@@ -273,6 +277,7 @@ for tool in "${TOOLS[@]}"; do
         intel)      icpc $ICPC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         helgrind)   g++ $VALGRIND_COMPILE_CPP_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         archer)     clang-archer++ $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
+        sword)      clang-sword++ $SWORD_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         tsan)       clang++ $TSAN_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         inspector)  icpc $ICPC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
       esac
@@ -283,6 +288,7 @@ for tool in "${TOOLS[@]}"; do
         intel)      icc $ICC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         helgrind)   gcc $VALGRIND_COMPILE_C_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         archer)     clang-archer $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
+        sword)      clang-sword $SWORD_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         tsan)       clang $TSAN_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         inspector)  icc $ICC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
       esac
@@ -329,6 +335,14 @@ for tool in "${TOOLS[@]}"; do
                 check_return_code $?;
 		echo "testname return $testreturn"
                 races=$(grep -ce 'WARNING: ThreadSanitizer: data race' tmp.log) 
+                cat tmp.log >> "$LOG_DIR/$logname" || >tmp.log ;;
+              sword)
+                SWORD_OPTIONS="traces_path=$PWD/data" $TIMEOUTCMD $TIMEOUTMIN"m" $MEMCHECK -f "%M" -o "$MEMLOG" "./$exname" $size &> tmp.log;
+                check_return_code $?;
+                sword-offline-analysis --analysis-tool sword-race-analysis --executable "./$exname" --traces-path $PWD/data --report-path $PWD/report
+                sword-print-report  --executable "./$exname" --report-path $PWD/report &> tmp.log
+		echo "testname return $testreturn"
+                races=$(grep -ce 'WARNING: SWORD: data race' tmp.log) 
                 cat tmp.log >> "$LOG_DIR/$logname" || >tmp.log ;;
               tsan)
                 races=$($MEMCHECK -f "%M" -o "$MEMLOG" "./$exname" $size 2>&1 | tee -a "$LOG_DIR/$logname" | grep -ce 'WARNING: ThreadSanitizer: data race') ;;
